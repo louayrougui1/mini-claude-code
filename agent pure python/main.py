@@ -199,7 +199,7 @@ def main():
     # Initialize Gemini
     client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
-    model = "gemini-3.6-flash"
+    model = "gemini-3.1-flash-lite"
 
     instruction = load_instructions()
     messages = []
