@@ -4,12 +4,35 @@ import subprocess
 from google import genai
 from dotenv import load_dotenv
 from colorama import init, Fore, Style
-
+from ddgs import DDGS
 # Initialize colors
 init(autoreset=True)
 
 # Load environment variables
 load_dotenv()
+
+
+def web_search(query):
+    try:
+        results = DDGS().text(
+            query,
+            max_results=5
+        )
+
+        if not results:
+            return "No search results found."
+
+        return "\n\n".join(
+            f"Title: {item['title']}\n"
+            f"URL: {item['href']}\n"
+            f"Snippet: {item['body']}"
+            for item in results
+        )
+
+    except Exception as e:
+        return f"Search error: {e}"
+
+
 def load_instructions(path="instructions.txt"):
     try:
         with open(path, "r", encoding="utf-8") as f:
@@ -18,8 +41,8 @@ def load_instructions(path="instructions.txt"):
         raise FileNotFoundError(
             f"Instructions file not found: {path}"
         )
-        
-# Startup ban
+
+
 # 1. List files in a directory
 def list_files(path="."):
     try:
@@ -143,6 +166,23 @@ TOOL_SCHEMAS = [
                     "required": ["path", "content"],
                 },
             },
+            {
+                "name": "web_search",
+                "description": (
+                    "Search the web for current information, news, "
+                    "sports results, and factual questions."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "The search query to look up online",
+                        },
+                    },
+                    "required": ["query"],
+                },
+            },
         ]
     }
 ]
@@ -153,13 +193,13 @@ def main():
     print(Fore.CYAN + Style.BRIGHT + "=" * 40)
     print(Fore.MAGENTA + Style.BRIGHT + "       GEMINI AI AGENT")
     print(Fore.CYAN + Style.BRIGHT + "=" * 40)
-    print(Fore.WHITE + "Tools: Read | List | Write | Command")
+    print(Fore.WHITE + "Tools: Read | List | Write | Command | Web Search")
     print(Fore.YELLOW + "Type 'exit' or 'quit' to stop.\n")
 
     # Initialize Gemini
     client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
-    model = "gemini-3.5-flash-lite"
+    model = "gemini-3.6-flash"
 
     instruction = load_instructions()
     messages = []
@@ -189,7 +229,7 @@ def main():
                     "tools": TOOL_SCHEMAS,
                 },
             )
-
+            
             # Gemini has finished responding
             if not response.function_calls:
                 print(
@@ -235,6 +275,15 @@ def main():
                         + f"\n[WRITE] Writing to file: {args['path']}"
                     )
                     result = write_file(**args)
+                    response_payload = {"result": result}
+
+                elif call.name == "web_search":
+                    args = dict(call.args)
+                    print(
+                        Fore.CYAN
+                        + f"\n[WEB SEARCH] Searching: {args['query']}"
+                    )
+                    result = web_search(**args)
                     response_payload = {"result": result}
 
                 else:
