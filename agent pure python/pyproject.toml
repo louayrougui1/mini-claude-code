@@ -12,6 +12,8 @@ dependencies = [
 ]
 
 [tool.uv]
+package = true
+
 # optional settings
 
 [project.scripts]
