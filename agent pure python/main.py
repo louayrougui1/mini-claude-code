@@ -11,13 +11,6 @@ init(autoreset=True)
 # Load environment variables
 load_dotenv()
 
-# Startup banner
-print(Fore.CYAN + Style.BRIGHT + "=" * 40)
-print(Fore.MAGENTA + Style.BRIGHT + "       GEMINI AI AGENT")
-print(Fore.CYAN + Style.BRIGHT + "=" * 40)
-print(Fore.WHITE + "Tools: Read | List | Write | Command")
-print(Fore.YELLOW + "Type 'exit' or 'quit' to stop.\n")
-
 
 # 1. List files in a directory
 def list_files(path="."):
@@ -147,12 +140,20 @@ TOOL_SCHEMAS = [
 ]
 
 
-# Initialize Gemini
-client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+def main():
+    # Startup banner
+    print(Fore.CYAN + Style.BRIGHT + "=" * 40)
+    print(Fore.MAGENTA + Style.BRIGHT + "       GEMINI AI AGENT")
+    print(Fore.CYAN + Style.BRIGHT + "=" * 40)
+    print(Fore.WHITE + "Tools: Read | List | Write | Command")
+    print(Fore.YELLOW + "Type 'exit' or 'quit' to stop.\n")
 
-model = "gemini-3.5-flash-lite"
+    # Initialize Gemini
+    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
-instruction = """
+    model = "gemini-3.5-flash-lite"
+
+    instruction = """
 You are an AI coding agent running in the user's local environment.
 
 Your goal is to help the user write, understand, debug, and improve code.
@@ -193,101 +194,104 @@ When a task requires tools, perform the work rather than merely describing
 what the user could do. When tools are unnecessary, answer directly.
 """
 
-messages = []
+    messages = []
 
-
-# Main chat loop
-while True:
-    user_input = input(
-        Fore.GREEN + Style.BRIGHT + "\nYou: " + Style.RESET_ALL
-    )
-
-    if user_input.strip().lower() in ("exit", "quit"):
-        print(Fore.YELLOW + "\nGoodbye!")
-        break
-
-    messages.append({
-        "role": "user",
-        "parts": [{"text": user_input}],
-    })
-
-    # Keep calling Gemini until it stops requesting tools
+    # Main chat loop
     while True:
-        response = client.models.generate_content(
-            model=model,
-            contents=messages,
-            config={
-                "system_instruction": instruction,
-                "tools": TOOL_SCHEMAS,
-            },
+        user_input = input(
+            Fore.GREEN + Style.BRIGHT + "\nYou: " + Style.RESET_ALL
         )
 
-        # Gemini has finished responding
-        if not response.function_calls:
-            print(
-                Fore.MAGENTA + Style.BRIGHT + "\nBot: "
-                + Style.RESET_ALL + (response.text or "")
-            )
-            messages.append(response.candidates[0].content)
+        if user_input.strip().lower() in ("exit", "quit"):
+            print(Fore.YELLOW + "\nGoodbye!")
             break
 
-        # Save Gemini's tool-call message
-        messages.append(response.candidates[0].content)
-
-        function_response_parts = []
-
-        # Execute requested tools
-        for call in response.function_calls:
-
-            if call.name == "read_file":
-                args = dict(call.args)
-                print(Fore.CYAN + f"\n[READ] Reading file: {args['path']}")
-                result = read_file(**args)
-                response_payload = {"result": result}
-
-            elif call.name == "list_files":
-                args = dict(call.args)
-                print(Fore.CYAN + f"\n[LIST] Listing directory: {args['path']}")
-                result = list_files(**args)
-                response_payload = {"result": result}
-
-            elif call.name == "run_command":
-                args = dict(call.args)
-                print(
-                    Fore.YELLOW
-                    + f"\n[COMMAND] Running: {args['command']}"
-                )
-                result = run_command(**args)
-                response_payload = {"result": result}
-
-            elif call.name == "write_file":
-                args = dict(call.args)
-                print(
-                    Fore.MAGENTA
-                    + f"\n[WRITE] Writing to file: {args['path']}"
-                )
-                result = write_file(**args)
-                response_payload = {"result": result}
-
-            else:
-                response_payload = {
-                    "error": f"Unknown tool: {call.name}"
-                }
-                print(
-                    Fore.RED
-                    + f"Warning: Unknown tool requested: {call.name}"
-                )
-
-            # Send each tool's result back to Gemini
-            function_response_parts.append({
-                "function_response": {
-                    "name": call.name,
-                    "response": response_payload,
-                }
-            })
-
-        # Provide tool results to Gemini
         messages.append({
             "role": "user",
-            "parts": function_response_parts,
+            "parts": [{"text": user_input}],
         })
+
+        # Keep calling Gemini until it stops requesting tools
+        while True:
+            response = client.models.generate_content(
+                model=model,
+                contents=messages,
+                config={
+                    "system_instruction": instruction,
+                    "tools": TOOL_SCHEMAS,
+                },
+            )
+
+            # Gemini has finished responding
+            if not response.function_calls:
+                print(
+                    Fore.MAGENTA + Style.BRIGHT + "\nBot: "
+                    + Style.RESET_ALL + (response.text or "")
+                )
+                messages.append(response.candidates[0].content)
+                break
+
+            # Save Gemini's tool-call message
+            messages.append(response.candidates[0].content)
+
+            function_response_parts = []
+
+            # Execute requested tools
+            for call in response.function_calls:
+
+                if call.name == "read_file":
+                    args = dict(call.args)
+                    print(Fore.CYAN + f"\n[READ] Reading file: {args['path']}")
+                    result = read_file(**args)
+                    response_payload = {"result": result}
+
+                elif call.name == "list_files":
+                    args = dict(call.args)
+                    print(Fore.CYAN + f"\n[LIST] Listing directory: {args['path']}")
+                    result = list_files(**args)
+                    response_payload = {"result": result}
+
+                elif call.name == "run_command":
+                    args = dict(call.args)
+                    print(
+                        Fore.YELLOW
+                        + f"\n[COMMAND] Running: {args['command']}"
+                    )
+                    result = run_command(**args)
+                    response_payload = {"result": result}
+
+                elif call.name == "write_file":
+                    args = dict(call.args)
+                    print(
+                        Fore.MAGENTA
+                        + f"\n[WRITE] Writing to file: {args['path']}"
+                    )
+                    result = write_file(**args)
+                    response_payload = {"result": result}
+
+                else:
+                    response_payload = {
+                        "error": f"Unknown tool: {call.name}"
+                    }
+                    print(
+                        Fore.RED
+                        + f"Warning: Unknown tool requested: {call.name}"
+                    )
+
+                # Send each tool's result back to Gemini
+                function_response_parts.append({
+                    "function_response": {
+                        "name": call.name,
+                        "response": response_payload,
+                    }
+                })
+
+            # Provide tool results to Gemini
+            messages.append({
+                "role": "user",
+                "parts": function_response_parts,
+            })
+
+
+if __name__ == "__main__":
+    main()

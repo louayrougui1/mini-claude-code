@@ -10,3 +10,9 @@ dependencies = [
     "openai>=3.31.0",
     "python-dotenv>=1.2.4",
 ]
+
+[tool.uv]
+# optional settings
+
+[project.scripts]
+start = "main:main"
