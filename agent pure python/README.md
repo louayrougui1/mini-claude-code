@@ -16,6 +16,7 @@ The agent is equipped with a comprehensive system instruction set and has access
 ## Agent Behavior & Rules
 
 The agent is instructed to follow strict engineering guidelines:
+
 - Inspect files and directories using tools rather than guessing.
 - Read existing code before modifying it.
 - Analyze errors and implement concrete, clean, and maintainable fixes.
